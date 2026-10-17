@@ -223,10 +223,17 @@ This repository provides comprehensive implementations, algorithms, and theoreti
 2. **Part-of-Speech Tagging with Hidden Markov Models**: Build statistical taggers using Transition ($A$) and Emission ($B$) matrices and decode the optimal tag sequence using the **Viterbi Algorithm**.
 3. **Autocomplete & N-Gram Language Models**: Build statistical generative language models, apply Lidstone add-$k$ smoothing, evaluate perplexity, and rank word auto-completions.
 4. **Word Embeddings with Continuous Bag-of-Words (CBOW)**: Implement a shallow 2-layer neural network from scratch in pure NumPy, perform forward and backward propagation with cross-entropy loss, and extract dense vector representations for PCA visualization.
+5. **Dynamic Programming Optimization**: Eliminate exponential brute-force combinatorial search spaces ($O(K^N)$) by constructing 2D memoization grids and trellis backpointers that execute in efficient polynomial $O(N \cdot K^2)$ time.
+6. **Robust Handling of Sparsity & Unknowns**: Resolve real-world vocabulary sparsity using Laplace and Lidstone add-$k$ smoothing, linear interpolation across $N$-gram orders, and morphological heuristic tagging (`--unk_noun--`, `--unk_verb--`, `<UNK>`) to ensure zero-probability bottlenecks never crash inference.
 
 ---
 
 ## <a id="theoretical-foundations-notes"></a>🔬 Theoretical Foundations & Notes
+
+> [!TIP]
+> **Core Mathematical Philosophy & Practical Takeaways:**
+> - **Language as Random Variables**: Every technique across these notes translates text into rigorous statistical decisions—from selecting the most likely typographical correction $\arg\max_{c} P(c)$, to decoding the most probable joint syntactic state sequence $\arg\max_{T} P(W, T)$, to predicting upcoming tokens $P(w_t \mid w_{t-1}, \dots, w_{t-n+1})$, to learning semantic geometries through gradient descent.
+> - **From Discrete Symbols to Continuous Semantics**: Traditional discrete one-hot encodings treat all words as orthogonal vectors with zero similarity ($\vec{w}_i \cdot \vec{w}_j = 0$). Word embeddings map vocabulary into dense continuous vector spaces where dot products represent semantic relatedness and linear algebra captures linguistic analogies ($\vec{v}_{\text{king}} - \vec{v}_{\text{man}} + \vec{v}_{\text{woman}} \approx \vec{v}_{\text{queen}}$).
 
 ---
 
@@ -243,6 +250,11 @@ The standard autocorrect pipeline proceeds in four distinct stages:
 2. **Generate Edit Candidates**: Synthesize all strings that are $1$ or $2$ edit operations away from the original query.
 3. **Filter Candidates**: Discard nonsensical strings by retaining only valid words present in $\mathcal{V}$.
 4. **Calculate Word Probabilities**: Select the candidate with the highest empirical occurrence probability in the reference corpus.
+
+> [!NOTE]
+> **Practical Engineering Intuitions:**
+> - **Search Space Pruning**: Generating candidates 1 edit away from an $L$-character word produces $54L + 25$ candidate strings, whereas 2 edits away produces $O(L^2)$ candidates ($\sim 3{,}000L$). Restricting candidates to edit distance $\le 2$ captures over $98\%$ of human typographical errors while keeping real-time lookup latency within milliseconds.
+> - **Contextual Disambiguation**: While baseline autocorrect evaluates unigram corpus probability $P(w)$ for isolated words, modern production systems incorporate bi-gram or tri-gram sequence context $P(w_i \mid w_{i-1})$ to accurately correct real-word typos in context (e.g., distinguishing *"peace of mind"* from *"piece of mind"*).
 
 #### <a id="12-building-the-candidate-generator"></a>1.2 Building the Candidate Generator
 
@@ -454,6 +466,11 @@ $$\log C[i, j] = \max_k \Big( \log C[k, j-1] + \log A_{k, i} + \log B_{i, w_j} \
   <p><em>Figure 20: Log-probability formulation to prevent arithmetic underflow during trellis decoding.</em></p>
 </div>
 
+> [!NOTE]
+> **Practical Engineering Intuitions:**
+> - **Global Path Optimization vs. Greedy Decoding**: Selecting the locally highest-probability tag at each word independently fails because it ignores transition syntax. A word like *"run"* could be a noun or verb, but a preceding preposition like *"to"* heavily favors $A_{\text{TO}, \text{VB}}$ over $A_{\text{TO}, \text{NN}}$. The Viterbi trellis evaluates transition and emission likelihoods simultaneously to identify the globally optimal joint path.
+> - **Log-Space Prevention of Floating-Point Underflow**: Multiplying $2K$ probabilities between $0$ and $1$ across a 30-word sentence produces tiny magnitudes ($< 10^{-60}$) that easily cause standard IEEE 754 float underflow. Computing in log space transforms products into additions ($\prod p_i \to \sum \log p_i$), maintaining full precision with zero numerical loss.
+
 ---
 
 ### <a id="part-3-autocomplete-n-gram-language-models"></a>Part 3: Autocomplete & N-Gram Language Models
@@ -610,6 +627,11 @@ When an unseen $N$-gram appears in evaluation data, $C(w_{n-1}, w_n) = 0$, causi
      <img src="assets/fig_37_linear_interpolation_smoothing.png" width="75%" alt="Fig 37: Linear Interpolation Smoothing">
      <p><em>Figure 37: Linear interpolation combining multiple N-gram orders.</em></p>
    </div>
+
+> [!NOTE]
+> **Practical Engineering Intuitions:**
+> - **Why Add-One (Laplace) Smoothing Is Too Aggressive in NLP**: In large vocabularies ($V > 30{,}000$), adding $1$ to every possible pair moves far too much probability mass from frequently observed words into the vast majority of zero-count pairs. Add-$k$ smoothing ($k \in [0.01, 0.05]$) or linear interpolation preserves real-world distributions far more accurately.
+> - **Perplexity Intuition (The "Branching Factor")**: A language model with a perplexity of $50$ on a test corpus is as uncertain about the next token as if it were choosing uniformly at random from 50 equally probable words. Minimizing perplexity is mathematically equivalent to maximizing the likelihood of the test text.
 
 ---
 
@@ -811,6 +833,11 @@ Embedding evaluation is conducted through two paradigms:
       <p><em>Figure 61: 2D visualization verifying semantic proximity among related word clusters.</em></p>
     </div>
 - **Extrinsic Evaluation**: Evaluates word vectors as feature representations in downstream NLP models (e.g., Sentiment Classification, Named Entity Recognition, POS Tagging) measured by $F_1$-score or accuracy.
+
+> [!NOTE]
+> **Practical Engineering Intuitions:**
+> - **The Symmetric Mean Advantage**: Averaging input weight columns $W_1$ and output weight rows $W_2^T$ ($W_3 = \frac{1}{2}(W_1 + W_2^T)$) regularizes individual weight variance, smoothing out stochastic gradient noise and consistently producing the highest-quality cosine similarities.
+> - **Linear Vector Analogies**: Continuous vector spaces organize semantic concepts geometrically. Because displacement vectors encode relationships, vector arithmetic mirrors relational reasoning: $\vec{v}_{\text{Paris}} - \vec{v}_{\text{France}} + \vec{v}_{\text{Germany}} \approx \vec{v}_{\text{Berlin}}$ or $\vec{v}_{\text{walking}} - \vec{v}_{\text{walk}} + \vec{v}_{\text{swim}} \approx \vec{v}_{\text{swimming}}$.
 
 ---
 
