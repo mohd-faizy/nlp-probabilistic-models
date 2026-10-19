@@ -13,6 +13,7 @@
 
 <!-- Technology Stack Badges -->
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![uv](https://img.shields.io/badge/uv-Astral-DE5FE9?style=for-the-badge&logo=astral&logoColor=white)](https://docs.astral.sh/uv/)
 [![Jupyter](https://img.shields.io/badge/Jupyter-Notebooks-F37626?style=for-the-badge&logo=jupyter&logoColor=white)](https://jupyter.org/)
 [![NumPy](https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white)](https://numpy.org/)
 [![SciPy](https://img.shields.io/badge/SciPy-8CAAE6?style=for-the-badge&logo=scipy&logoColor=white)](https://scipy.org/)
@@ -41,6 +42,10 @@
 - [🏛 Repository Architecture](#repository-architecture)
 - [📚 Notebook & Implementation Index](#notebook-implementation-index)
 - [🚀 Environment Setup & Installation](#environment-setup-installation)
+  - [Option A: Fast Setup with `uv` (Recommended)](#option-a-fast-setup-with-uv-recommended)
+  - [Option B: Traditional Setup with `venv` & `pip`](#option-b-traditional-setup-with-venv--pip)
+  - [Offline Execution & NLTK Configuration](#offline-execution--nltk-configuration)
+  - [Running the Notebooks](#running-notebooks)
 - [📖 Summary](#summary)
 - [🔬 Theoretical Foundations & Notes](#theoretical-foundations-notes)
   - [Part 1: Autocorrect & Minimum Edit Distance](#part-1-autocorrect-minimum-edit-distance)
@@ -132,6 +137,8 @@ nlp-probabilistic-models/
 ├── utils2.py                                        # Backward-compatible shim -> utils.utils2
 ├── utils_pos.py                                     # Backward-compatible shim -> utils.utils_pos
 ├── utils_nb.py                                      # Backward-compatible shim -> utils.utils_nb
+├── pyproject.toml                                   # UV & PEP 621 project configuration & dependencies
+├── uv.lock                                          # Hermetic UV lockfile for reproducible environments
 ├── requirements.txt                                 # Production Python dependencies specification
 ├── LICENSE                                          # MIT Open-Source License
 └── README.md                                        # Master repository documentation & theoretical notes
@@ -166,10 +173,106 @@ nlp-probabilistic-models/
 
 ### 1. Prerequisites
 
-- Python 3.8, 3.9, 3.10, 3.11, or 3.12
-- Git & Jupyter Notebook / JupyterLab
+- **Python 3.8+** (Supports Python 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, and 3.14+)
+- **Git** & **Jupyter Notebook / JupyterLab**
+- **[uv](https://docs.astral.sh/uv/)** *(Recommended)*: An ultra-fast Rust-based Python package and project manager replacing `pip`, `pip-tools`, and `virtualenv`.
 
-### 2. Clone Repository & Create Virtual Environment
+---
+
+### <a id="option-a-fast-setup-with-uv-recommended"></a>Option A: Fast Setup with `uv` (Recommended — 10x-100x Faster)
+
+#### Step 1: Install `uv`
+
+If you haven't installed `uv` yet, install it via the official standalone installer or pip:
+
+```bash
+# Windows (PowerShell):
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Linux / macOS:
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Alternative (via pip or Homebrew):
+pip install uv
+# brew install uv
+```
+
+Verify your installation:
+```bash
+uv --version
+```
+
+#### Step 2: Choose Your UV Setup Workflow
+
+You can set up your environment using either `uv sync` (project mode) or `uv venv` (standalone virtual environment mode):
+
+##### ⚡ Workflow 1: Project Sync with `uv sync` (Fastest & Reproducible)
+
+This repository includes a `pyproject.toml` and lockfile `uv.lock`. You can initialize the environment and install all pinned dependencies with a single command:
+
+```bash
+# 1. Clone the repository & navigate into it
+git clone https://github.com/mohd-faizy/nlp-probabilistic-models.git
+cd nlp-probabilistic-models
+
+# 2. Automatically create .venv and sync all dependencies from uv.lock
+uv sync
+
+# 3. Launch Jupyter directly (no manual activation required!)
+uv run jupyter notebook
+```
+
+> [!TIP]
+> If you wish to activate the generated `.venv` manually:
+> - **Windows (PowerShell)**: `.\.venv\Scripts\Activate.ps1`
+> - **Windows (cmd)**: `.\.venv\Scripts\activate.bat`
+> - **Linux / macOS**: `source .venv/bin/activate`
+
+##### 🛠 Workflow 2: Virtual Environment with `uv venv` & `uv pip`
+
+If you prefer managing virtual environments explicitly:
+
+```bash
+# 1. Clone the repository & navigate into it
+git clone https://github.com/mohd-faizy/nlp-probabilistic-models.git
+cd nlp-probabilistic-models
+
+# 2. Create a virtual environment using uv
+uv venv
+# Note: You can optionally specify a target Python version, e.g.: uv venv --python 3.11
+
+# 3. Activate the virtual environment
+# Windows (PowerShell):
+.\.venv\Scripts\Activate.ps1
+# Windows (cmd):
+.\.venv\Scripts\activate.bat
+# Linux / macOS:
+source .venv/bin/activate
+
+# 4. Install dependencies via lightning-fast uv pip
+uv pip install -r requirements.txt
+
+# 5. Launch Jupyter Notebook
+jupyter notebook
+```
+
+> [!NOTE]
+> **Essential `uv` CLI Cheat Sheet:**
+> - `uv init`: Initialize a new project (generates `pyproject.toml` and `.python-version`)
+> - `uv venv`: Create a fresh isolated virtual environment (`.venv`)
+> - `uv sync`: Synchronize current environment with `pyproject.toml` and `uv.lock`
+> - `uv pip install -r requirements.txt`: 10-100x faster drop-in replacement for standard `pip install`
+> - `uv add <package>`: Add a new package dependency to `pyproject.toml` and install it
+> - `uv remove <package>`: Remove a package dependency from `pyproject.toml`
+> - `uv run <command>`: Execute any command (e.g., `uv run jupyter notebook`) seamlessly inside the environment
+
+---
+
+### <a id="option-b-traditional-setup-with-venv--pip"></a>Option B: Traditional Setup with `venv` & `pip`
+
+If you do not have `uv` installed and prefer the standard Python toolchain:
+
+#### 1. Clone Repository & Create Virtual Environment
 
 ```bash
 # Clone the repository
@@ -188,14 +291,22 @@ python -m venv venv
 source venv/bin/activate
 ```
 
-### 3. Install Package Dependencies
+#### 2. Install Package Dependencies
 
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 4. Offline Execution & NLTK Configuration
+#### 3. Launch Jupyter Notebooks
+
+```bash
+jupyter notebook
+```
+
+---
+
+### <a id="offline-execution--nltk-configuration"></a>Offline Execution & NLTK Configuration
 
 The repository includes all pre-downloaded NLTK tokenizer resources in `data/corpora/tokenizers/`.  
 Importing `utils` automatically registers local tokenizer paths into `nltk.data.path`:
@@ -206,13 +317,19 @@ import utils  # Automatically registers local corpora and tokenizers for 100% of
 
 No external network downloads or API calls are required during runtime.
 
-### 5. Launch Jupyter Notebooks
+---
+
+### <a id="running-notebooks"></a>📓 Running the Notebooks
+
+Launch Jupyter Notebook to explore the interactive implementations (`01_` through `16_`):
 
 ```bash
+# If using uv (no manual activation required):
+uv run jupyter notebook
+
+# Or within an activated virtual environment:
 jupyter notebook
 ```
-
-Navigate to any numbered notebook (`01_` through `16_`) to run the interactive code!
 
 ---
 
